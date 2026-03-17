@@ -92,6 +92,7 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const clickBuffer = 0.25;
 
+let moveNumber = 0;
 let nextStoneColor = 'black';
 const placedStones = new Map();
 let lastStoneRuby = null;
@@ -152,6 +153,7 @@ window.addEventListener('click', (event) => {
         if (Math.abs(gridX - nearestX) * step < clickBuffer && Math.abs(gridZ - nearestZ) * step < clickBuffer) {
           const key = `${nearestX},${nearestZ}`;
           if (!placedStones.has(key)) {
+            moveNumber++;
             const stone = new THREE.Mesh(stoneGeometry, nextStoneColor === 'black' ? blackMaterial : whiteMaterial);
             const posX = (nearestX * step) - (gridArea / 2);
             const posZ = (nearestZ * step) - (gridArea / 2);
@@ -160,11 +162,31 @@ window.addEventListener('click', (event) => {
             boardGroup.add(stone);
             placedStones.set(key, stone);
 
+            const textCanvas = document.createElement('canvas');
+            const size = 64;
+            textCanvas.width = size;
+            textCanvas.height = size;
+            const context = textCanvas.getContext('2d');
+            context.fillStyle = nextStoneColor === 'black' ? 'white' : 'black';
+            context.font = 'bold 40px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(moveNumber.toString(), size/2, size/2 + 2);
+            const numberTexture = new THREE.CanvasTexture(textCanvas);
+            const numberMaterial = new THREE.MeshBasicMaterial({ map: numberTexture, transparent: true });
+            const numberGeometry = new THREE.PlaneGeometry(0.4, 0.4);
+            const numberMesh = new THREE.Mesh(numberGeometry, numberMaterial);
+            numberMesh.position.set(posX, 0.725, posZ);
+            numberMesh.rotation.x = -Math.PI / 2;
+            boardGroup.add(numberMesh);
+
             if (!lastStoneRuby) {
-              lastStoneRuby = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 4), rubyMaterial);
+              const coneGeometry = new THREE.ConeGeometry(0.12, 0.25, 4);
+              coneGeometry.rotateX(Math.PI);
+              lastStoneRuby = new THREE.Mesh(coneGeometry, rubyMaterial);
               boardGroup.add(lastStoneRuby);
             }
-            lastStoneRuby.position.set(posX, 0.9, posZ);
+            lastStoneRuby.position.set(posX, 0.88, posZ);
 
             const notation = `${letters[nearestX]}${19 - nearestZ}`;
             statusText.innerText = `Last move: ${notation} (${nextStoneColor.charAt(0).toUpperCase() + nextStoneColor.slice(1)})`;
@@ -202,7 +224,7 @@ function animate() {
   // --- RUBY ANIMATION ---
   if (lastStoneRuby) {
     lastStoneRuby.rotation.y += 0.03;
-    lastStoneRuby.position.y = 0.9 + Math.sin(time * 4) * 0.04;
+    lastStoneRuby.position.y = 0.88 + Math.sin(time * 4) * 0.04;
   }
   renderer.render(scene, camera);
 }
