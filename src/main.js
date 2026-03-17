@@ -93,20 +93,16 @@ const whiteMaterial = new THREE.MeshStandardMaterial({
 });
 
 // Ruby Geometry & Material (Inverted Pyramid)
-const rubyGeometry = new THREE.ConeGeometry(0.12, 0.25, 4);
+const rubyGeometry = new THREE.ConeGeometry(0.12, 0.25, 4); // 4 segments for a pyramid shape
 const rubyMaterial = new THREE.MeshStandardMaterial({ 
   color: 0xff0000, 
   emissive: 0xff0000,
-  emissiveIntensity: 1,
+  emissiveIntensity: 0.5,
   metalness: 0.9, 
   roughness: 0.1,
   transparent: true,
-  opacity: 0.9
+  opacity: 0.8
 });
-
-// Ruby Light for flicker and reflection
-const rubyLight = new THREE.PointLight(0xff0000, 1.5, 2);
-rubyLight.decay = 2;
 
 // UI Reference
 const statusText = document.getElementById('status-text');
@@ -157,14 +153,10 @@ window.addEventListener('click', (event) => {
             // Place or move the Ruby on top of the last stone
             if (!lastStoneRuby) {
               lastStoneRuby = new THREE.Mesh(rubyGeometry, rubyMaterial);
-              lastStoneRuby.rotation.x = -Math.PI / 2; // Tip points toward the camera again
+              lastStoneRuby.rotation.x = -Math.PI / 2; // Tip points toward the camera
               scene.add(lastStoneRuby);
-              
-              // Add light as a child so it follows the ruby
-              lastStoneRuby.add(rubyLight);
-              rubyLight.position.set(0, 0, 0); // Center light inside the ruby origin
             }
-            lastStoneRuby.position.set(posX, posY, 1.1); // Sit on top of the stone
+            lastStoneRuby.position.set(posX, posY, 0.9); // Sit closer to the stone
 
             // Update UI/Notation
             const xCoord = String.fromCharCode(65 + (nearestX >= 8 ? nearestX + 1 : nearestX)); 
@@ -199,19 +191,14 @@ function animate() {
 
   time += 0.02;
 
-  // Animate the Ruby marker
+  // Animate the Ruby marker (Keep rotation and bounce)
   if (lastStoneRuby) {
     // Rotate slowly on its axis
     lastStoneRuby.rotation.y += 0.03;
     
     // Hover bounce effect (Up and down on Z axis)
-    const bounceOffset = Math.sin(time * 4) * 0.08;
-    lastStoneRuby.position.z = 1.1 + bounceOffset;
-
-    // Flicker the light intensity and match it with ruby's emissive glow
-    const flicker = 1.0 + Math.random() * 0.5 + Math.sin(time * 10) * 0.3;
-    rubyLight.intensity = flicker;
-    lastStoneRuby.material.emissiveIntensity = flicker * 2;
+    const bounceOffset = Math.sin(time * 4) * 0.04;
+    lastStoneRuby.position.z = 0.9 + bounceOffset;
   }
 
   renderer.render(scene, camera);
