@@ -17,16 +17,8 @@
             z-index: 10;
         }
 
-        #butterfly-text {
-            position: absolute;
-            color: #dbb06d;
-            font-size: 2.5rem;
-            font-weight: bold;
-            text-shadow: 0 0 15px rgba(219, 176, 109, 0.6);
-            pointer-events: none;
-            white-space: nowrap;
-            z-index: 5;
-            font-family: 'Times New Roman', serif; /* A bit more classic for Go */
+        #status-text {
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -34,8 +26,8 @@
     <div id="ui">
         <h1>Three.js Go Board</h1>
         <p>A 19x19 interactive Go board!</p>
+        <div id="status-text">I love Go.</div>
     </div>
-    <div id="butterfly-text">I love Go</div>
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>

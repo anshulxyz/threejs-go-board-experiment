@@ -96,7 +96,8 @@ const whiteMaterial = new THREE.MeshStandardMaterial({
 const rubyGeometry = new THREE.ConeGeometry(0.12, 0.25, 4);
 const rubyMaterial = new THREE.MeshStandardMaterial({ 
   color: 0xff0000, 
-  emissive: 0x660000,
+  emissive: 0xff0000,
+  emissiveIntensity: 1,
   metalness: 0.9, 
   roughness: 0.1,
   transparent: true,
@@ -106,6 +107,9 @@ const rubyMaterial = new THREE.MeshStandardMaterial({
 // Ruby Light for flicker and reflection
 const rubyLight = new THREE.PointLight(0xff0000, 1.5, 2);
 rubyLight.decay = 2;
+
+// UI Reference
+const statusText = document.getElementById('status-text');
 
 window.addEventListener('click', (event) => {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -153,11 +157,12 @@ window.addEventListener('click', (event) => {
             // Place or move the Ruby on top of the last stone
             if (!lastStoneRuby) {
               lastStoneRuby = new THREE.Mesh(rubyGeometry, rubyMaterial);
-              lastStoneRuby.rotation.x = -Math.PI / 2; // Pointing "into" the board (inverted)
+              lastStoneRuby.rotation.x = -Math.PI / 2; // Tip points toward the camera again
               scene.add(lastStoneRuby);
               
               // Add light as a child so it follows the ruby
               lastStoneRuby.add(rubyLight);
+              rubyLight.position.set(0, 0, 0); // Center light inside the ruby origin
             }
             lastStoneRuby.position.set(posX, posY, 1.1); // Sit on top of the stone
 
@@ -165,11 +170,8 @@ window.addEventListener('click', (event) => {
             const xCoord = String.fromCharCode(65 + (nearestX >= 8 ? nearestX + 1 : nearestX)); 
             const yCoord = nearestY + 1;
             const notation = `${xCoord}${yCoord}`;
-            butterflyText.innerText = notation;
-            butterflyText.style.color = nextStoneColor === 'black' ? '#ffffff' : '#000000';
-            butterflyText.style.backgroundColor = nextStoneColor === 'black' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)';
-            butterflyText.style.padding = '0 10px';
-            butterflyText.style.borderRadius = '5px';
+            const colorName = nextStoneColor.charAt(0).toUpperCase() + nextStoneColor.slice(1);
+            statusText.innerText = `Last move: ${notation} (${colorName})`;
 
             // Switch turn
             nextStoneColor = nextStoneColor === 'black' ? 'white' : 'black';
@@ -180,8 +182,6 @@ window.addEventListener('click', (event) => {
   }
 });
 
-// Butterfly text animation setup
-const butterflyText = document.getElementById('butterfly-text');
 let time = 0;
 
 // Handle window resizing
@@ -197,7 +197,6 @@ function animate() {
   // Update controls for damping to work
   controls.update();
 
-  // Animate the butterfly text (Figure-eight / Lissajous curve)
   time += 0.02;
 
   // Animate the Ruby marker
@@ -209,18 +208,11 @@ function animate() {
     const bounceOffset = Math.sin(time * 4) * 0.08;
     lastStoneRuby.position.z = 1.1 + bounceOffset;
 
-    // Flicker the light intensity
-    rubyLight.intensity = 1.0 + Math.random() * 0.5 + Math.sin(time * 10) * 0.3;
+    // Flicker the light intensity and match it with ruby's emissive glow
+    const flicker = 1.0 + Math.random() * 0.5 + Math.sin(time * 10) * 0.3;
+    rubyLight.intensity = flicker;
+    lastStoneRuby.material.emissiveIntensity = flicker * 2;
   }
-
-  const x = Math.sin(time) * (window.innerWidth / 3);
-  const y = Math.sin(time * 2) * (window.innerHeight / 4);
-  
-  // Center the text and apply the offset
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-  
-  butterflyText.style.transform = `translate(${centerX + x}px, ${centerY + y}px) translate(-50%, -50%) rotate(${Math.cos(time) * 20}deg)`;
 
   renderer.render(scene, camera);
 }
