@@ -18,7 +18,29 @@
         }
 
         #status-text {
+            color: #dbb06d;
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: 'Times New Roman', serif;
             margin-top: 10px;
+        }
+
+        .button {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background-color: #dbb06d;
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto; /* Enable clicking */
+            font-family: sans-serif;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #c49a5b;
         }
     </style>
 </head>
@@ -26,7 +48,9 @@
     <div id="ui">
         <h1>Three.js Go Board</h1>
         <p>A 19x19 interactive Go board!</p>
-        <div id="status-text">I love Go.</div>
+        <div id="status-text">I love Go</div>
+        <button id="rotate-btn" class="button">Rotate 90°</button>
+        <button id="reset-btn" class="button">Reset View</button>
     </div>
     <script type="module" src="/src/main.js"></script>
 </body>

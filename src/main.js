@@ -8,106 +8,130 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Setup OrbitControls for interactivity
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; // Adds a smooth "weight" to the rotation
+controls.enableDamping = true; 
 controls.dampingFactor = 0.05;
 
-// Add a simple Box (Go Board)
-const gridArea = 10; // The 19x19 grid will be exactly 10x10
-const borderSize = 0.5; // About 1rem (approx 0.5 units in this world scale)
-const boardSize = gridArea + borderSize * 2; // Total board size including border
+// --- BOARD GROUP SETUP ---
+const boardGroup = new THREE.Group();
+scene.add(boardGroup); // Sitting on XZ plane by default (Y is up)
 
+// Board Configuration
+const gridArea = 10; 
+const borderSize = 0.8; 
+const boardSize = gridArea + borderSize * 2;
 const gridLines = 19;
-const divisions = gridLines - 1; // 18 divisions create 19 lines
-
-const geometry = new THREE.BoxGeometry(boardSize, 1, boardSize);
-const material = new THREE.MeshStandardMaterial({ color: 0xdbb06d }); // Wood-like color for Go board
-const cube = new THREE.Mesh(geometry, material);
-
-// Rotate the cube so the flat surface faces the camera
-cube.rotation.x = Math.PI / 2;
-scene.add(cube);
-
-// Add the Grid
+const divisions = gridLines - 1;
 const boardColor = 0xdbb06d;
-const gridColor = 0x4d3e26; // Much darker to compensate for lighting
-const grid = new THREE.GridHelper(gridArea, divisions, gridColor, gridColor);
-grid.rotation.x = Math.PI / 2;
-grid.position.z = 0.51; // Slightly in front of the surface to avoid flickering
-scene.add(grid);
+const gridColor = 0x4d3e26;
 
-// Add lighting so the board is visible
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
+// --- CREATE TOP TEXTURE ---
+const topCanvas = document.createElement('canvas');
+topCanvas.width = 1024; topCanvas.height = 1024;
+const topCtx = topCanvas.getContext('2d');
+topCtx.fillStyle = '#dbb06d'; topCtx.fillRect(0, 0, 1024, 1024);
+const padding = (borderSize / boardSize) * 1024;
+const cellSize = (1024 - 2 * padding) / divisions;
+topCtx.strokeStyle = '#4d3e26'; topCtx.lineWidth = 3;
+for (let i = 0; i < gridLines; i++) {
+  const pos = padding + i * cellSize;
+  topCtx.beginPath(); topCtx.moveTo(pos, padding); topCtx.lineTo(pos, 1024 - padding); topCtx.stroke();
+  topCtx.beginPath(); topCtx.moveTo(padding, pos); topCtx.lineTo(1024 - padding, pos); topCtx.stroke();
+}
+topCtx.fillStyle = '#362c1b';
+[3, 9, 15].forEach(x => [3, 9, 15].forEach(y => {
+  topCtx.beginPath(); topCtx.arc(padding + x * cellSize, padding + y * cellSize, 10, 0, Math.PI * 2); topCtx.fill();
+}));
+topCtx.fillStyle = '#4d3e26'; topCtx.font = 'bold 35px "Times New Roman", serif';
+topCtx.textAlign = 'center'; topCtx.textBaseline = 'middle';
+const letters = "ABCDEFGHJKLMNOPQRST".split(""); 
+for (let i = 0; i < gridLines; i++) {
+  const pos = padding + i * cellSize;
+  topCtx.fillText(letters[i], pos, padding / 2);
+  topCtx.fillText(letters[i], pos, 1024 - padding / 2);
+  topCtx.fillText(19 - i, padding / 2, pos);
+  topCtx.fillText(19 - i, 1024 - padding / 2, pos);
+}
+const topTexture = new THREE.CanvasTexture(topCanvas);
+
+// --- CREATE BACK TEXTURE ---
+const backCanvas = document.createElement('canvas');
+backCanvas.width = 512; backCanvas.height = 512;
+const backCtx = backCanvas.getContext('2d');
+backCtx.fillStyle = '#dbb06d'; backCtx.fillRect(0, 0, 512, 512);
+backCtx.fillStyle = '#4d3e26'; backCtx.font = 'bold 40px "Times New Roman", serif';
+backCtx.textAlign = 'center'; backCtx.textBaseline = 'middle';
+backCtx.fillText('online-go.com', 256, 256);
+const backTexture = new THREE.CanvasTexture(backCanvas);
+
+// --- BOARD MESH ---
+const geometry = new THREE.BoxGeometry(boardSize, 1, boardSize);
+const boardMaterials = [
+  new THREE.MeshStandardMaterial({ color: boardColor }), // +X
+  new THREE.MeshStandardMaterial({ color: boardColor }), // -X
+  new THREE.MeshStandardMaterial({ map: topTexture }),    // +Y (Top Face)
+  new THREE.MeshStandardMaterial({ map: backTexture }),   // -Y (Bottom Face)
+  new THREE.MeshStandardMaterial({ color: boardColor }), // +Z
+  new THREE.MeshStandardMaterial({ color: boardColor })  // -Z
+];
+
+const cube = new THREE.Mesh(geometry, boardMaterials);
+boardGroup.add(cube);
+
+// --- LIGHTING ---
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 5, 10);
+directionalLight.position.set(5, 10, 5);
 scene.add(directionalLight);
 
-// Add Hoshi points (Star points)
-const hoshiColor = 0x362c1b; // Much darker for a more distinct, classic look
-const hoshiGeometry = new THREE.CircleGeometry(0.1, 32);
-const hoshiMaterial = new THREE.MeshBasicMaterial({ color: hoshiColor });
+camera.position.set(0, 12, 10);
+camera.lookAt(0, 0, 0);
 
-const hoshiPositions = [3, 9, 15];
-const step = gridArea / divisions;
-
-hoshiPositions.forEach(xIndex => {
-  hoshiPositions.forEach(yIndex => {
-    const hoshi = new THREE.Mesh(hoshiGeometry, hoshiMaterial);
-    
-    // Calculate position: (index * step) - (gridArea / 2)
-    const posX = (xIndex * step) - (gridArea / 2);
-    const posY = (yIndex * step) - (gridArea / 2);
-    
-    hoshi.position.set(posX, posY, 0.52); // Slightly in front of grid lines (0.51)
-    scene.add(hoshi);
-  });
-});
-
-camera.position.z = 12;
-
-// Raycaster for interaction
+// --- INTERACTION & STATE ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-const clickBuffer = 0.25; // How close to an intersection you need to click
+const clickBuffer = 0.25;
 
-// Go Game State
 let nextStoneColor = 'black';
-const placedStones = new Map(); // Keep track of occupied intersections
-let lastStoneRuby = null; // Marker for the last stone
+const placedStones = new Map();
+let lastStoneRuby = null;
 
-// Stone Geometry & Materials
+let targetRotationY = 0;
+let isAnimatingRotation = false;
+
 const stoneGeometry = new THREE.SphereGeometry(0.24, 32, 32);
-stoneGeometry.scale(1, 1, 0.5); // Flatten the sphere along Z to make it a flat disc/biconvex shape
+stoneGeometry.scale(1, 0.5, 1);
+const blackMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+const whiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+const rubyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5, metalness: 0.9, transparent: true, opacity: 0.8 });
 
-const blackMaterial = new THREE.MeshStandardMaterial({ 
-  color: 0x111111, 
-  roughness: 0.2, 
-  metalness: 0.1 
-});
-const whiteMaterial = new THREE.MeshStandardMaterial({ 
-  color: 0xffffff, 
-  roughness: 0.2, 
-  metalness: 0.1 
-});
-
-// Ruby Geometry & Material (Inverted Pyramid)
-const rubyGeometry = new THREE.ConeGeometry(0.12, 0.25, 4); // 4 segments for a pyramid shape
-const rubyMaterial = new THREE.MeshStandardMaterial({ 
-  color: 0xff0000, 
-  emissive: 0xff0000,
-  emissiveIntensity: 0.5,
-  metalness: 0.9, 
-  roughness: 0.1,
-  transparent: true,
-  opacity: 0.8
-});
-
-// UI Reference
 const statusText = document.getElementById('status-text');
+const rotateBtn = document.getElementById('rotate-btn');
+const resetBtn = document.getElementById('reset-btn');
+
+// --- ROTATE BUTTON LOGIC ---
+rotateBtn.addEventListener('click', () => {
+  targetRotationY += Math.PI / 2;
+  isAnimatingRotation = true;
+});
+
+// --- RESET VIEW LOGIC ---
+resetBtn.addEventListener('click', () => {
+  // Reset board rotation
+  targetRotationY = 0;
+  boardGroup.rotation.y = 0;
+  isAnimatingRotation = false;
+
+  // Reset camera position and controls target
+  camera.position.set(0, 12, 10);
+  controls.target.set(0, 0, 0);
+  controls.update();
+});
 
 window.addEventListener('click', (event) => {
+  if (event.target === rotateBtn || event.target === resetBtn) return;
+  if (isAnimatingRotation) return; // Prevent clicking while board is spinning
+
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -116,56 +140,34 @@ window.addEventListener('click', (event) => {
 
   if (intersects.length > 0) {
     const hit = intersects[0];
-    
     if (hit.faceIndex === 4 || hit.faceIndex === 5) {
-      const point = hit.point;
-      
+      const localPoint = cube.worldToLocal(hit.point.clone());
       const step = gridArea / divisions;
-      const gridX = (point.x + gridArea / 2) / step;
-      const gridY = (point.y + gridArea / 2) / step;
-      
+      const gridX = (localPoint.x + gridArea / 2) / step;
+      const gridZ = (localPoint.z + gridArea / 2) / step;
       const nearestX = Math.round(gridX);
-      const nearestY = Math.round(gridY);
+      const nearestZ = Math.round(gridZ);
       
-      if (nearestX >= 0 && nearestX < gridLines && nearestY >= 0 && nearestY < gridLines) {
-        const distX = Math.abs(gridX - nearestX) * step;
-        const distY = Math.abs(gridY - nearestY) * step;
-        
-        if (distX < clickBuffer && distY < clickBuffer) {
-          const key = `${nearestX},${nearestY}`;
-          
-          // Check if stone already exists here
+      if (nearestX >= 0 && nearestX < gridLines && nearestZ >= 0 && nearestZ < gridLines) {
+        if (Math.abs(gridX - nearestX) * step < clickBuffer && Math.abs(gridZ - nearestZ) * step < clickBuffer) {
+          const key = `${nearestX},${nearestZ}`;
           if (!placedStones.has(key)) {
-            // Place a new stone
-            const stone = new THREE.Mesh(
-              stoneGeometry, 
-              nextStoneColor === 'black' ? blackMaterial : whiteMaterial
-            );
-            
+            const stone = new THREE.Mesh(stoneGeometry, nextStoneColor === 'black' ? blackMaterial : whiteMaterial);
             const posX = (nearestX * step) - (gridArea / 2);
-            const posY = (nearestY * step) - (gridArea / 2);
+            const posZ = (nearestZ * step) - (gridArea / 2);
             
-            stone.position.set(posX, posY, 0.6); // Placed flat on the surface
-            scene.add(stone);
-            
+            stone.position.set(posX, 0.6, posZ);
+            boardGroup.add(stone);
             placedStones.set(key, stone);
 
-            // Place or move the Ruby on top of the last stone
             if (!lastStoneRuby) {
-              lastStoneRuby = new THREE.Mesh(rubyGeometry, rubyMaterial);
-              lastStoneRuby.rotation.x = -Math.PI / 2; // Tip points toward the camera
-              scene.add(lastStoneRuby);
+              lastStoneRuby = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 4), rubyMaterial);
+              boardGroup.add(lastStoneRuby);
             }
-            lastStoneRuby.position.set(posX, posY, 0.9); // Sit closer to the stone
+            lastStoneRuby.position.set(posX, 0.9, posZ);
 
-            // Update UI/Notation
-            const xCoord = String.fromCharCode(65 + (nearestX >= 8 ? nearestX + 1 : nearestX)); 
-            const yCoord = nearestY + 1;
-            const notation = `${xCoord}${yCoord}`;
-            const colorName = nextStoneColor.charAt(0).toUpperCase() + nextStoneColor.slice(1);
-            statusText.innerText = `Last move: ${notation} (${colorName})`;
-
-            // Switch turn
+            const notation = `${letters[nearestX]}${19 - nearestZ}`;
+            statusText.innerText = `Last move: ${notation} (${nextStoneColor.charAt(0).toUpperCase() + nextStoneColor.slice(1)})`;
             nextStoneColor = nextStoneColor === 'black' ? 'white' : 'black';
           }
         }
@@ -175,8 +177,6 @@ window.addEventListener('click', (event) => {
 });
 
 let time = 0;
-
-// Handle window resizing
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -185,23 +185,25 @@ window.addEventListener('resize', () => {
 
 function animate() {
   requestAnimationFrame(animate);
-  
-  // Update controls for damping to work
   controls.update();
-
   time += 0.02;
 
-  // Animate the Ruby marker (Keep rotation and bounce)
-  if (lastStoneRuby) {
-    // Rotate slowly on its axis
-    lastStoneRuby.rotation.y += 0.03;
-    
-    // Hover bounce effect (Up and down on Z axis)
-    const bounceOffset = Math.sin(time * 4) * 0.04;
-    lastStoneRuby.position.z = 0.9 + bounceOffset;
+  // --- SMOOTH ROTATION ANIMATION ---
+  if (isAnimatingRotation) {
+    const diff = targetRotationY - boardGroup.rotation.y;
+    if (Math.abs(diff) > 0.01) {
+      boardGroup.rotation.y += diff * 0.1; // Smoothly interpolate
+    } else {
+      boardGroup.rotation.y = targetRotationY;
+      isAnimatingRotation = false;
+    }
   }
 
+  // --- RUBY ANIMATION ---
+  if (lastStoneRuby) {
+    lastStoneRuby.rotation.y += 0.03;
+    lastStoneRuby.position.y = 0.9 + Math.sin(time * 4) * 0.04;
+  }
   renderer.render(scene, camera);
 }
-
 animate();
