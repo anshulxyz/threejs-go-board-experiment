@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -76,12 +78,22 @@ const boardMaterials = [
 ];
 
 const cube = new THREE.Mesh(geometry, boardMaterials);
+cube.receiveShadow = true;
 boardGroup.add(cube);
 
 // --- LIGHTING ---
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 5);
+directionalLight.position.set(5, 10, 7.5);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 1024;
+directionalLight.shadow.mapSize.height = 1024;
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 30;
+directionalLight.shadow.camera.left = -10;
+directionalLight.shadow.camera.right = 10;
+directionalLight.shadow.camera.top = 10;
+directionalLight.shadow.camera.bottom = -10;
 scene.add(directionalLight);
 
 camera.position.set(0, 12, 10);
@@ -204,6 +216,7 @@ window.addEventListener('click', (event) => {
             hoverSquare.visible = false;
             moveNumber++;
             const stone = new THREE.Mesh(stoneGeometry, nextStoneColor === 'black' ? blackMaterial : whiteMaterial);
+            stone.castShadow = true;
             const posX = (nearestX * step) - (gridArea / 2);
             const posZ = (nearestZ * step) - (gridArea / 2);
             
@@ -233,6 +246,7 @@ window.addEventListener('click', (event) => {
               const coneGeometry = new THREE.ConeGeometry(0.12, 0.25, 4);
               coneGeometry.rotateX(Math.PI);
               lastStoneRuby = new THREE.Mesh(coneGeometry, rubyMaterial);
+              lastStoneRuby.castShadow = true;
               boardGroup.add(lastStoneRuby);
             }
             lastStoneRuby.position.set(posX, 0.88, posZ);
