@@ -106,6 +106,14 @@ const blackMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughnes
 const whiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
 const rubyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5, metalness: 0.9, transparent: true, opacity: 0.8 });
 
+const hoverSquare = new THREE.Mesh(
+    new THREE.PlaneGeometry(gridArea / divisions, gridArea / divisions),
+    new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 })
+);
+hoverSquare.rotation.x = -Math.PI / 2;
+hoverSquare.visible = false;
+boardGroup.add(hoverSquare);
+
 const statusText = document.getElementById('status-text');
 const rotateBtn = document.getElementById('rotate-btn');
 const resetBtn = document.getElementById('reset-btn');
@@ -127,6 +135,46 @@ resetBtn.addEventListener('click', () => {
   camera.position.set(0, 12, 10);
   controls.target.set(0, 0, 0);
   controls.update();
+});
+
+window.addEventListener('mousemove', (event) => {
+    if (isAnimatingRotation) {
+        hoverSquare.visible = false;
+        return;
+    }
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(cube);
+
+    if (intersects.length > 0) {
+        const hit = intersects[0];
+        if (hit.faceIndex === 4 || hit.faceIndex === 5) {
+            const localPoint = cube.worldToLocal(hit.point.clone());
+            const step = gridArea / divisions;
+            const gridX = (localPoint.x + gridArea / 2) / step;
+            const gridZ = (localPoint.z + gridArea / 2) / step;
+            const nearestX = Math.round(gridX);
+            const nearestZ = Math.round(gridZ);
+            
+            if (nearestX >= 0 && nearestX < gridLines && nearestZ >= 0 && nearestZ < gridLines) {
+                if (Math.abs(gridX - nearestX) * step < clickBuffer && Math.abs(gridZ - nearestZ) * step < clickBuffer) {
+                    const key = `${nearestX},${nearestZ}`;
+                    if (!placedStones.has(key)) {
+                        const posX = (nearestX * step) - (gridArea / 2);
+                        const posZ = (nearestZ * step) - (gridArea / 2);
+                        hoverSquare.position.set(posX, 0.51, posZ);
+                        hoverSquare.visible = true;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    hoverSquare.visible = false;
 });
 
 window.addEventListener('click', (event) => {
@@ -153,6 +201,7 @@ window.addEventListener('click', (event) => {
         if (Math.abs(gridX - nearestX) * step < clickBuffer && Math.abs(gridZ - nearestZ) * step < clickBuffer) {
           const key = `${nearestX},${nearestZ}`;
           if (!placedStones.has(key)) {
+            hoverSquare.visible = false;
             moveNumber++;
             const stone = new THREE.Mesh(stoneGeometry, nextStoneColor === 'black' ? blackMaterial : whiteMaterial);
             const posX = (nearestX * step) - (gridArea / 2);
