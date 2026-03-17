@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js + Bun</title>
+    <style>
+        body { margin: 0; background-color: #111; font-family: sans-serif; overflow: hidden; }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #butterfly-text {
+            position: absolute;
+            color: #00ffcc;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.8);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>Three.js 3D Box</h1>
+        <p>A simple rotating box + a flying butterfly text!</p>
+    </div>
+    <div id="butterfly-text">Hello, World</div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
